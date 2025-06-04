@@ -6,10 +6,11 @@
 import argparse
 import json
 import os
-import sys
 import time
+from datetime import timedelta, datetime
+import sys
 from argparse import Namespace
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 import requests
 import sys
 from base.alfred import Alfred, Alfred_Item
@@ -17,6 +18,38 @@ import hashlib
 import asyncio
 import aiohttp
 import aiofiles
+
+
+
+
+
+def cleanup_old_html_files():
+    """Clean up HTML files older than 1 day"""
+    try:
+        current_time = time.time()
+        one_day_ago = current_time - (24 * 60 * 60)  # 24 hours in seconds
+        
+        for filename in os.listdir(ALFRED_WORKFLOW_CACHE):
+            if filename.endswith('.html'):
+                filepath = os.path.join(ALFRED_WORKFLOW_CACHE, filename)
+                # Skip default.html
+                if filename == 'default.html':
+                    continue
+                    
+                # Get file modification time
+                file_mtime = os.path.getmtime(filepath)
+                
+                # Delete if older than 1 day
+                if file_mtime < one_day_ago:
+                    try:
+                        os.remove(filepath)
+                        print(f"Deleted old file: {filename}", file=sys.stderr)
+                    except Exception as e:
+                        print(f"Error deleting {filename}: {str(e)}", file=sys.stderr)
+    except Exception as e:
+        print(f"Error during cleanup: {str(e)}", file=sys.stderr)
+
+
 
 def init_workflow():
     global ALFRED_WORKFLOW_CACHE, query_ports
@@ -33,6 +66,9 @@ def init_workflow():
     if ',' in query_ports:
         query_ports = query_ports.split(',')
         
+    # Clean up old HTML files
+    cleanup_old_html_files()
+    
 ########################################################        
         
 
