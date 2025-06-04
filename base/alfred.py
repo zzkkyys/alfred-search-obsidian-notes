@@ -15,6 +15,7 @@ class Alfred_Item:
     match: str = None
     arg: str = None
     icon: str = None
+    quicklookurl: str = None
     
     def __post_init__(self) -> None:
         if self.match is None:
