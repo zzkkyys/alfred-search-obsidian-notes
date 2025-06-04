@@ -1,0 +1,11 @@
+**.DS_Store
+**.pyc
+**/.virtual_documents
+**/.ipynb_checkpoints
+**/.vscode
+**/.venv
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
