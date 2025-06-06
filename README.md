@@ -13,10 +13,15 @@ An Alfred Workflow for quick searching, previewing, and opening Obsidian notes.
 
 ## Requirements
 
-- macOS
 - [Alfred 4+](https://www.alfredapp.com/)
 - [Obsidian](https://obsidian.md/)
-- Python 3.6+
+    - You must install the OmniSearch plugin, and open its HTTP server
+    ![](imgs/obsidian-monisearch.png)
+- Python packages
+    - you have to install the following packages in your python environment
+        ```bash
+        pip install requests aiohttp aiofiles
+        ```
 
 ## Installation
 
