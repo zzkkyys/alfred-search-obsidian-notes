@@ -1,0 +1,59 @@
+name: Create Alfred Workflow
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:  # 允许手动触发
+
+# 添加权限配置
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 获取完整历史
+
+      - name: Build Alfred workflow
+        id: builder
+        uses: almibarss/build-alfred-workflow@v1
+        with:
+          workflow_dir: ./src  # 改为当前目录
+          exclude_patterns: '*.pyc *__pycache__/* .git/* .github/* .vscode/* dist/* temp_workflow/*'
+          custom_version: ${{ github.ref_name }}
+          workflow_name: "Alfred-Common-Text-Operations"
+
+      - name: Get commit info
+        id: commit_info
+        run: |
+          echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
+          echo "hash=$(git log -1 --pretty=format:'%H')" >> $GITHUB_OUTPUT
+          echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
+          echo "date=$(git log -1 --pretty=format:'%ad' --date=short)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        with:
+          files: ${{ steps.builder.outputs.workflow_file }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            # Alfred Common Text Operations ${{ github.ref_name }}
+            
+            ${{ steps.commit_info.outputs.message }}
+
+            
+            **Hash:** ${{ steps.commit_info.outputs.hash }}
+            **Author:** ${{ steps.commit_info.outputs.author }}
+            **Date:** ${{ steps.commit_info.outputs.date }}
+            
+
