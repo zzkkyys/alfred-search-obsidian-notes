@@ -60,7 +60,8 @@ def make_zip(version):
                 if file in exclude or file.endswith('.pyc') or file.startswith('.'):
                     continue
                 path = os.path.join(root, file)
-                arcname = os.path.relpath(path, '.')
+                # 使用相对于 ZIP_PATH 的路径，这样文件直接在 zip 根目录下
+                arcname = os.path.relpath(path, ZIP_PATH)
                 z.write(path, arcname)
     print(f'打包完成: {name}')
     return name
