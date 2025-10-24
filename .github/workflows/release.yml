@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+  pull-requests: read
 
 jobs:
   build-and-release:

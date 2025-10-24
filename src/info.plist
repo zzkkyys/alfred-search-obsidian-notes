@@ -306,7 +306,7 @@ Ensure Obsidian search service is running on:
       <string>PYTHON_PATHS</string>
     </array>
     <key>version</key>
-    <string>1.2</string>
+    <string>1.21</string>
     <key>webaddress</key>
     <string>https://www.alfredapp.com</string>
   </dict>
