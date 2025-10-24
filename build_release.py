@@ -8,6 +8,8 @@ import re
 import urllib.request
 import urllib.parse
 from pathlib import Path
+import zlib
+
 
 PLIST_PATH = 'src/info.plist'
 README_PATH = 'README.md'
@@ -74,7 +76,9 @@ def download_images_and_replace_links(readme_content):
                 filename = 'image.png'
             
             # 生成本地文件路径
-            local_filename = f"image_{hash(url) % 100000}{Path(filename).suffix}"
+            input_bytes = url.encode('utf-8')
+            save_name = zlib.crc32(input_bytes) & 0xffffffff
+            local_filename = f"image_{save_name}{Path(filename).suffix}"
             local_path = images_dir / local_filename
             
             # 下载图片

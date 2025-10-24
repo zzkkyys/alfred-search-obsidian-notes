@@ -18,6 +18,7 @@ import hashlib
 import asyncio
 import aiohttp
 import aiofiles
+from content_processor import read_full_markdown_content
 
 
 
@@ -48,7 +49,6 @@ def cleanup_old_html_files():
                         print(f"Error deleting {filename}: {str(e)}", file=sys.stderr)
     except Exception as e:
         print(f"Error during cleanup: {str(e)}", file=sys.stderr)
-
 
 
 def init_workflow():
@@ -202,7 +202,11 @@ def get_obsidian_URI_from_query_res(query_res:list):
     for res in query_res:
         res['URI'] = obsidian_url.format(quote(res['vault']), quote(res['path']))   
         res['arg'] = f"{res['vault']}|||||{res['path']}"
-        res["quicklookurl"] = generate_html(res['excerpt'])
+        # 使用新的内容处理器
+        # res = process_search_result(res, ALFRED_WORKFLOW_CACHE, generate_html)
+        full_content = read_full_markdown_content(res['vault'], res['path'])
+        res["quicklookurl"] = generate_html(full_content)
+
 
 
 

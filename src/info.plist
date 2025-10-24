@@ -210,7 +210,7 @@ Created by [zzkkyys](https://github.com/zzkkyys) | [Github](https://github.com/z
 - [Alfred 4+](https://www.alfredapp.com/)
 - [Obsidian](https://obsidian.md/)
     - You must install the OmniSearch plugin, and open its HTTP server
-    ![](images/image_91537.png)
+    ![](images/image_3998880171.png)
 - Python packages
     - you have to install the following packages in your python environment
         ```bash
@@ -222,7 +222,7 @@ Created by [zzkkyys](https://github.com/zzkkyys) | [Github](https://github.com/z
 1. Download the latest `.alfredworkflow` file
 2. Double-click to install in Alfred
 3. Configure environment variables in Alfred preferences
-![](images/image_89115.png)
+![](images/image_2625505048.png)
   - Configure Obsidian search ports in Alfred preferences
   - Configure python paths, use colon `:` to separate multiple paths if needed
 4. Ensure Obsidian search service is running
@@ -275,7 +275,7 @@ Created by [zzkkyys](https://github.com/zzkkyys) | [Github](https://github.com/z
       <string>PYTHON_PATHS</string>
     </array>
     <key>version</key>
-    <string>1.24</string>
+    <string>1.25</string>
     <key>webaddress</key>
     <string>https://www.alfredapp.com</string>
   </dict>
