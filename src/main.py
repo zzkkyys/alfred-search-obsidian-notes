@@ -87,126 +87,137 @@ async def download_file(session, url, filepath):
     except Exception as e:
         print(f"Error downloading {url}: {str(e)}", file=sys.stderr)
         return None
-
+    
+    
 async def download_js_libraries():
-    """Download required JavaScript libraries to cache directory asynchronously"""
+    """Download or read cached JS libs; return dict of filename->code (empty string on failure)"""
     js_files = {
         'marked.min.js': {
-            'url': 'https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js',
-            'version': '4.0.0'
+            'url': 'https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js',
+            'version': '4.3.0'
         },
         'tex-mml-chtml.js': {
             'url': 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js',
-            'version': '3.0.0'
+            'version': '3.2.2'
         },
         'mermaid.min.js': {
             'url': 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
-            'version': '10.0.0'
+            'version': '10.9.1'
+        },
+        # 新增：js-yaml（解析 frontmatter）
+        'js-yaml.min.js': {
+            'url': 'https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js',
+            'version': '4.1.0'
         }
     }
-    
     js_cache_dir = os.path.join(ALFRED_WORKFLOW_CACHE, 'js')
     os.makedirs(js_cache_dir, exist_ok=True)
-    
-    # Create version file if not exists
+
     version_file = os.path.join(js_cache_dir, 'versions.json')
+    cached_versions = {}
     if os.path.exists(version_file):
-        async with aiofiles.open(version_file, 'r') as f:
-            content = await f.read()
-            cached_versions = json.loads(content)
-    else:
-        cached_versions = {}
-    
+        try:
+            async with aiofiles.open(version_file, 'r', encoding='utf-8') as f:
+                cached_versions = json.loads(await f.read() or '{}')
+        except Exception:
+            cached_versions = {}
+
     js_contents = {}
-    download_tasks = []
-    
     async with aiohttp.ClientSession() as session:
         for filename, info in js_files.items():
-            filepath = os.path.join(js_cache_dir, filename)
-            current_version = info['version']
-            
-            # Check if file needs update
-            if (filename not in cached_versions or 
-                cached_versions[filename] != current_version or 
-                not os.path.exists(filepath)):
-                
-                download_tasks.append(
-                    download_file(session, info['url'], filepath)
-                )
-                cached_versions[filename] = current_version
+            path = os.path.join(js_cache_dir, filename)
+            need_update = (
+                (filename not in cached_versions) or
+                (cached_versions.get(filename) != info['version']) or
+                (not os.path.exists(path))
+            )
+            if need_update:
+                try:
+                    code = await download_file(session, info['url'], path)
+                    if code is None:
+                        # 网络失败，尝试读本地旧缓存
+                        try:
+                            async with aiofiles.open(path, 'r', encoding='utf-8') as f:
+                                code = await f.read()
+                        except Exception:
+                            code = ''
+                    js_contents[filename] = code
+                    cached_versions[filename] = info['version']
+                except Exception:
+                    js_contents[filename] = ''
             else:
-                # Read from cache
-                async with aiofiles.open(filepath, 'r', encoding='utf-8') as f:
-                    js_contents[filename] = await f.read()
-        
-        # Download all needed files concurrently
-        if download_tasks:
-            results = await asyncio.gather(*download_tasks)
-            for filename, content in zip([f for f in js_files.keys() if f not in js_contents], results):
-                if content:
-                    js_contents[filename] = content
-    
-    # Update version file
-    async with aiofiles.open(version_file, 'w') as f:
-        await f.write(json.dumps(cached_versions))
-    
+                try:
+                    async with aiofiles.open(path, 'r', encoding='utf-8') as f:
+                        js_contents[filename] = await f.read()
+                except Exception:
+                    js_contents[filename] = ''
+
+    try:
+        async with aiofiles.open(version_file, 'w', encoding='utf-8') as f:
+            await f.write(json.dumps(cached_versions))
+    except Exception:
+        pass
+
     return js_contents
 
-async def generate_html_async(content):
-    """Generate HTML content asynchronously"""
-    # Download JS libraries if needed
+
+
+async def generate_html_async(content: str, search_terms=None, page_width: str = None) -> str:
     js_contents = await download_js_libraries()
-    
-    # Read HTML template
+
     template_path = os.path.join(os.path.dirname(__file__), 'template.html')
     if not hasattr(generate_html_async, 'template_cache'):
         async with aiofiles.open(template_path, 'r', encoding='utf-8') as f:
             generate_html_async.template_cache = await f.read()
-    
-    # Replace placeholders with actual content
-    html_content = generate_html_async.template_cache.replace('{marked_js}', js_contents['marked.min.js'])
-    html_content = html_content.replace('{mathjax_js}', js_contents['tex-mml-chtml.js'])
-    html_content = html_content.replace('{mermaid_js}', js_contents['mermaid.min.js'])
-    
-    # Add content
-    html_content += f'''
-    <div class="excerpt">
-        <div class="markdown-content" data-markdown="{content}"></div>
-    </div>
-    </body>
-    </html>
-    '''
-    
-    try:
-        hash_value = hashlib.sha256(html_content.encode()).hexdigest()
-        html_path = os.path.join(ALFRED_WORKFLOW_CACHE, f"{hash_value}.html")
-        
-        # Only write if file doesn't exist
-        if not os.path.exists(html_path):
-            async with aiofiles.open(html_path, "w", encoding='utf-8') as f:
-                await f.write(html_content)
-        
-        return html_path
-    except Exception as e:
-        print(f"Error generating HTML: {str(e)}", file=sys.stderr)
-        return os.path.join(ALFRED_WORKFLOW_CACHE, "default.html")
+    tpl = generate_html_async.template_cache
 
-def generate_html(content):
+    # 注入脚本源码
+    html = (tpl
+        .replace('{marked_js}', js_contents.get('marked.min.js',''))
+        .replace('{mathjax_js}', js_contents.get('tex-mml-chtml.js',''))
+        .replace('{mermaid_js}', js_contents.get('mermaid.min.js',''))
+        .replace('{jsyaml_js}', js_contents.get('js-yaml.min.js',''))  # 若有 frontmatter 解析
+    )
+
+    # 注入搜索词 JSON（空数组也要是 '[]'）
+    terms_json = json.dumps(search_terms or [], ensure_ascii=False)
+    html = html.replace('{search_terms_json}', terms_json)
+
+    #（可选）替换 max width 变量
+    if page_width:
+        html = html.replace('--page-width: 860px', f'--page-width: {page_width}')
+
+    # 注入 Markdown 原文
+    marker = '<script type="text/markdown" id="md-src"></script>'
+    html = html.replace(marker, f'<script type="text/markdown" id="md-src">{content}</script>')
+
+    # 落地缓存
+    hash_value = hashlib.sha256(html.encode('utf-8')).hexdigest()
+    html_path = os.path.join(ALFRED_WORKFLOW_CACHE, f"{hash_value}.html")
+    if not os.path.exists(html_path):
+        async with aiofiles.open(html_path, "w", encoding='utf-8') as f:
+            await f.write(html)
+    return html_path
+
+
+def generate_html(content, search_terms=None, page_width: str = None) -> str:
     """Synchronous wrapper for generate_html_async"""
-    return asyncio.run(generate_html_async(content))
+    return asyncio.run(generate_html_async(content, search_terms=search_terms, page_width=page_width))
 
 
 def get_obsidian_URI_from_query_res(query_res:list):
-    obsidian_url = "obsidian://advanced-uri?valut={}&filepath={}"
-    # obsidian_url = "obsidian://advanced-uri?valut={}"
+    obsidian_url = "obsidian://advanced-uri?vault={}&filepath={}"
+    # obsidian_url = "obsidian://advanced-uri?vault={}"
     for res in query_res:
         res['URI'] = obsidian_url.format(quote(res['vault']), quote(res['path']))   
         res['arg'] = f"{res['vault']}|||||{res['path']}"
         # 使用新的内容处理器
         # res = process_search_result(res, ALFRED_WORKFLOW_CACHE, generate_html)
         full_content = read_full_markdown_content(res['vault'], res['path'])
-        res["quicklookurl"] = generate_html(full_content)
-
+        # res["quicklookurl"] = generate_html(full_content)
+        # 关键：把 foundWords 注入，自动高亮 + 滚动到第一个
+        search_terms = res.get('foundWords', [])
+        res["quicklookurl"] = generate_html(full_content, search_terms=search_terms)
 
 
 

@@ -1,149 +1,217 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excerpts</title>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 40px;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        .excerpt { 
-            margin-bottom: 30px;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .basename { 
-            font-weight: 600;
-            font-size: 1.3em;
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        .path { 
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 15px;
-        }
-        .markdown-content { 
-            line-height: 1.8;
-        }
-        code { 
-            background: #f8f9fa;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            font-size: 0.9em;
-        }
-        pre { 
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 15px 0;
-        }
-        pre code {
-            background: none;
-            padding: 0;
-        }
-        blockquote {
-            border-left: 4px solid #e0e0e0;
-            margin: 15px 0;
-            padding: 10px 20px;
-            background: #f8f9fa;
-            color: #555;
-        }
-        img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 15px 0;
-        }
-        th, td {
-            border: 1px solid #e0e0e0;
-            padding: 8px 12px;
-            text-align: left;
-        }
-        th {
-            background: #f8f9fa;
-        }
-    </style>
-    <script>
-    {marked_js}
-    </script>
-    <script>
-    {mathjax_js}
-    </script>
-    <script>
-    {mermaid_js}
-    </script>
-    <script>
-        // Initialize Mermaid
-        mermaid.initialize({ 
-            startOnLoad: true,
-            theme: 'default',
-            securityLevel: 'loose'
-        });
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-        // Initialize Marked with options
-        marked.setOptions({
-            breaks: true,
-            gfm: true,
-            headerIds: true,
-            mangle: false
-        });
+<!-- 新增：js-yaml 源码占位（由 Python 注入真实代码） -->
+<script id="lib-jsyaml">{jsyaml_js}</script>
 
-        // Add custom renderer for <br> tags
-        const renderer = new marked.Renderer();
-        const originalText = renderer.text.bind(renderer);
-        renderer.text = function(text) {
-            return originalText(text.replace(/<br\s*\/?>/gi, '\n'));
-        };
-        marked.use({ renderer });
+<style>
+  :root{ --page-width: 860px; }         /* 这里可以随时改：限制整体宽度 */
+  body{ max-width: var(--page-width); margin:32px auto; padding:0 16px; font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+  .markdown-root img, .markdown-root table{ max-width:100%; }
+  .frontmatter{
+    border:1px solid #e5e7eb; background:#fafafa; padding:12px 14px; border-radius:10px; margin-bottom:18px;
+    font-size:14px; color:#374151;
+  }
+  .frontmatter .kv{ display:flex; gap:8px; flex-wrap:wrap; }
+  .frontmatter .k{ min-width:90px; color:#6b7280; }
+  .frontmatter .v{ flex:1; }
+  .frontmatter .tag{ display:inline-block; padding:2px 8px; border-radius:999px; background:#eef2ff; margin-right:6px; font-size:12px; }
+</style>
 
-        // Process content when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                const excerpts = document.querySelectorAll('.markdown-content');
-                excerpts.forEach(excerpt => {
-                    const rawMarkdown = excerpt.dataset.markdown;
-                    if (rawMarkdown) {
-                        // Process markdown
-                        excerpt.innerHTML = marked.parse(rawMarkdown);
-                        
-                        // Process math
-                        MathJax.typesetPromise([excerpt]).catch(err => {
-                            console.error('MathJax error:', err);
-                        });
+<!-- 由 Python 注入：搜索词 JSON -->
+<script id="search-terms" type="application/json">{search_terms_json}</script>
 
-                        // Process mermaid diagrams
-                        const mermaidDiagrams = excerpt.querySelectorAll('.mermaid');
-                        mermaidDiagrams.forEach(diagram => {
-                            try {
-                                mermaid.init(undefined, diagram);
-                            } catch (err) {
-                                console.error('Mermaid error:', err);
-                                diagram.innerHTML = 'Error rendering diagram';
-                            }
-                        });
-                    }
-                });
-            } catch (err) {
-                console.error('Error processing content:', err);
-            }
-        });
-    </script>
+<style>
+  mark.hl{
+    background: #fff59d; padding: 0 .15em; border-radius: .2em;
+  }
+  /* 可选：让第一处命中更醒目 */
+  mark.hl.first{ box-shadow: 0 0 0 2px rgba(255,193,7,.4) inset; }
+</style>
+
+
+
+<title>Preview</title>
+<style>
+  body{max-width:860px;margin:32px auto;padding:0 16px;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+  pre,code{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  pre{padding:12px;overflow:auto;border-radius:8px;background:#f6f8fa}
+  table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px 10px}
+  h1,h2,h3{margin-top:1.6em}
+  blockquote{border-left:4px solid #ddd;margin:1em 0;padding:0 1em;color:#555}
+  a{color:#0969da;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .task-list-item{list-style-type:none}
+</style>
+
+<!-- 这三个占位由 Python 填充为 JS 源码文本 -->
+<script id="lib-marked">{marked_js}</script>
+<script id="lib-mermaid">{mermaid_js}</script>
+<script id="lib-mathjax">{mathjax_js}</script>
+
 </head>
-<body> 
+<body>
+<div class="markdown-root"></div>
+<!-- 原始 Markdown 文本 -->
+<script type="text/markdown" id="md-src"></script>
+
+<script>
+  // 初始化 Mermaid
+  if (window.mermaid) { mermaid.initialize({startOnLoad:false}); }
+
+  // 解析 frontmatter（--- 开头的 YAML）
+  function splitFrontmatter(raw) {
+    if (!raw.startsWith('---\n')) return { meta:null, body:raw };
+    const end = raw.indexOf('\n---', 4);
+    if (end === -1) return { meta:null, body:raw };
+    const yaml = raw.slice(4, end);         // 介于 --- 与 --- 之间
+    const rest = raw.slice(end + 4);        // 之后的正文
+    let meta = null;
+    try { meta = window.jsyaml ? window.jsyaml.load(yaml) : null; } catch(e){ meta = null; }
+    return { meta, body: rest.replace(/^\s*\n/, '') };
+  }
+
+  function renderFrontmatter(meta) {
+    if (!meta || typeof meta !== 'object') return '';
+    const rows = [];
+    for (const k of Object.keys(meta)) {
+      let val = meta[k];
+      if (Array.isArray(val)) {
+        val = val.map(v => `<span class="tag">${String(v)}</span>`).join(' ');
+      } else if (val && typeof val === 'object') {
+        val = `<code>${JSON.stringify(val)}</code>`;
+      } else {
+        val = String(val);
+      }
+      rows.push(`<div class="kv"><div class="k">${k}</div><div class="v">${val}</div></div>`);
+    }
+    return `<div class="frontmatter">${rows.join('')}</div>`;
+  }
+
+  (function(){
+    const srcEl = document.getElementById('md-src');
+    const raw = srcEl ? srcEl.textContent : '';
+    const { meta, body } = splitFrontmatter(raw);
+
+    // 先渲染 frontmatter 面板
+    const root = document.querySelector('.markdown-root');
+    root.innerHTML = renderFrontmatter(meta);
+
+    // 再渲染正文（marked）
+    const html = marked.parse(body, { mangle:false, headerIds:true });
+    const frag = document.createElement('div');
+    frag.innerHTML = html;
+    root.appendChild(frag);
+
+    // Mermaid：把 ```mermaid 代码块替换成 <div class="mermaid"> 再跑一次
+    if (window.mermaid) {
+      const nodes = root.querySelectorAll('pre > code.language-mermaid');
+      nodes.forEach(codeEl => {
+        const container = document.createElement('div');
+        container.className = 'mermaid';
+        container.textContent = codeEl.textContent;
+        const pre = codeEl.closest('pre');
+        pre.parentNode.replaceChild(container, pre);
+      });
+      try { mermaid.run({}); } catch(e){}
+    }
+
+    // MathJax
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      MathJax.typesetPromise([root]).catch(()=>{});
+    }
+  })();
+</script>
+
+<script>
+  // --- 高亮工具函数：遍历文本节点并用 <mark> 包裹命中 ---
+  function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function highlightTerms(root, terms, {caseSensitive=false, skipSelectors=['script','style']}={}){
+    if (!terms || !terms.length) return 0;
+    // 去重、按长度降序（避免 "net" 抢先匹配 "internet"）
+    terms = Array.from(new Set(terms.filter(Boolean))).sort((a,b)=>b.length-a.length);
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node){
+        const p = node.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        // 跳过不该处理的区域（如 <script>、<style>…）
+        if (skipSelectors.some(sel => p.closest(sel))) return NodeFilter.FILTER_REJECT;
+        // 可选：若不想高亮代码，解开下一行（跳过 pre/code）
+        // if (p.closest('pre, code')) return NodeFilter.FILTER_REJECT;
+        if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    let total = 0;
+    const flags = caseSensitive ? 'g' : 'gi';
+
+    // 逐个文本节点处理
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+    nodes.forEach(textNode=>{
+      let text = textNode.nodeValue;
+      let anyHit = false;
+      // 构造“或”正则：term1|term2|...
+      const pattern = terms.map(escapeRegExp).join('|');
+      if (!pattern) return;
+      const re = new RegExp(pattern, flags);
+
+      // 如果该节点没有命中，略过
+      if (!re.test(text)) return;
+
+      // 重新从头走，为了切分并插入 mark
+      re.lastIndex = 0;
+      const frag = document.createDocumentFragment();
+      let lastIndex = 0, m;
+      while ((m = re.exec(text)) && total < 200 /* 防止海量命中卡顿 */) {
+        const i = m.index, j = i + m[0].length;
+        if (i > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, i)));
+        const mark = document.createElement('mark');
+        mark.className = 'hl';
+        mark.textContent = text.slice(i, j);
+        frag.appendChild(mark);
+        lastIndex = j;
+        total++; anyHit = true;
+      }
+      if (anyHit) {
+        if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        textNode.parentNode.replaceChild(frag, textNode);
+      }
+    });
+
+    // 给第一处命中加 first 标记
+    const first = root.querySelector('mark.hl');
+    if (first) first.classList.add('first');
+    return total;
+  }
+
+  // --- 读取搜索词并高亮 + 自动滚动 ---
+  (function(){
+    try{
+      const termsEl = document.getElementById('search-terms');
+      const terms = termsEl ? JSON.parse(termsEl.textContent || '[]') : [];
+      const root = document.querySelector('.markdown-root');
+      const hitCount = highlightTerms(root, terms, {caseSensitive:false});
+
+      // 自动滚动到第一处命中，居中
+      if (hitCount){
+        const first = root.querySelector('mark.hl');
+        if (first){
+          first.scrollIntoView({block:'center', inline:'nearest', behavior:'auto'});
+          // 可选：短暂的动效提示
+          first.animate([{background:'#ffe082'},{background:'#fff59d'}], {duration:600});
+        }
+      }
+    }catch(e){}
+  })();
+</script>
+
+</body>
+</html>
