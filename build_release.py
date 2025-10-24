@@ -4,6 +4,10 @@ import xmltodict
 import subprocess
 import zipfile
 import plistlib
+import re
+import urllib.request
+import urllib.parse
+from pathlib import Path
 
 PLIST_PATH = 'src/info.plist'
 README_PATH = 'README.md'
@@ -38,18 +42,81 @@ def should_release(version, tag):
         return [int(x) for x in s.strip('v').split('.') if x.isdigit()]
     return norm(version) > norm(tag)
 
-# 4. 写入 readme 到 info.plist 的 readme 字段
+# 4. 下载网络图片并替换链接
+def download_images_and_replace_links(readme_content):
+    # 匹配 Markdown 图片语法: ![alt](url)
+    img_pattern = r'!\[([^\]]*)\]\((https?://[^\)]+)\)'
+    matches = re.findall(img_pattern, readme_content)
+    
+    if not matches:
+        return readme_content
+    
+    # 确保目标目录存在
+    src_dir = Path(PLIST_PATH).parent
+    images_dir = src_dir / 'images'
+    images_dir.mkdir(exist_ok=True)
+    
+    modified_content = readme_content
+    
+    for alt_text, url in matches:
+        try:
+            print(f'正在下载图片: {url}')
+            
+            # 获取文件扩展名
+            parsed_url = urllib.parse.urlparse(url)
+            path_parts = Path(parsed_url.path).parts
+            if path_parts:
+                filename = path_parts[-1]
+                # 如果文件名没有扩展名，尝试从 URL 参数或默认为 .png
+                if '.' not in filename:
+                    filename += '.png'
+            else:
+                filename = 'image.png'
+            
+            # 生成本地文件路径
+            local_filename = f"image_{hash(url) % 100000}{Path(filename).suffix}"
+            local_path = images_dir / local_filename
+            
+            # 下载图片
+            with urllib.request.urlopen(url) as response:
+                if response.status == 200:
+                    with open(local_path, 'wb') as f:
+                        f.write(response.read())
+                    
+                    # 替换 README 中的链接为相对路径
+                    relative_path = f"images/{local_filename}"
+                    old_link = f'![{alt_text}]({url})'
+                    new_link = f'![{alt_text}]({relative_path})'
+                    modified_content = modified_content.replace(old_link, new_link)
+                    
+                    print(f'图片下载成功: {local_filename}')
+                else:
+                    print(f'下载图片失败: {url} (状态码: {response.status})')
+                    
+        except Exception as e:
+            print(f'下载图片时出错 {url}: {e}')
+            continue
+    
+    return modified_content
+
+# 5. 写入 readme 到 info.plist 的 readme 字段
 def inject_readme():
     
     with open(PLIST_PATH, 'rb') as f:
         plist_data = plistlib.load(f)
 
-    plist_data['readme'] = open(README_PATH).read()
+    # 读取 README 内容
+    readme_content = open(README_PATH, 'r', encoding='utf-8').read()
+    
+    # 下载图片并替换链接
+    modified_readme = download_images_and_replace_links(readme_content)
+    
+    plist_data['readme'] = modified_readme
 
     with open(PLIST_PATH, 'wb') as f:
         plistlib.dump(plist_data, f)
         
-# 5. 打包为 alfredworkflow 文件
+# 6. 打包为 alfredworkflow 文件
 def make_zip(version):
     name = ZIP_OUTPUT.format(version=version)
     with zipfile.ZipFile(name, 'w', zipfile.ZIP_DEFLATED) as z:

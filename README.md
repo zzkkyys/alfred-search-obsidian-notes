@@ -1,6 +1,12 @@
 # Alfred Obsidian Search Workflow
 
+
 An Alfred Workflow for quick searching, previewing, and opening Obsidian notes.
+
+
+Created by [zzkkyys](https://github.com/zzkkyys) | [Github](https://github.com/zzkkyys/alfred-search-obsidian-notes) 
+
+
 
 ## Features
 
