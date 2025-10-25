@@ -1,3 +1,5 @@
+![](https://ayyyyy.sbs/2025/10/CleanShot%202025-10-25%20at%2010.32.59%402x.png)
+
 # Alfred Obsidian Search Workflow
 
 
